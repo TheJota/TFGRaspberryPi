@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Streaming Control</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 1.4em;
+        }
+
+        label {
+            display: block;
+            margin-top: 12px;
+            font-weight: bold;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 8px;
+            margin-top: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            margin-top: 16px;
+            padding: 10px 24px;
+            font-size: 1em;
+            cursor: pointer;
+        }
+
+        #start-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+
+        #stop-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+
+        #status-box {
+            margin-top: 24px;
+            padding: 16px;
+            background: #f4f4f4;
+            border-radius: 4px;
+        }
+
+        .dot {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+
+        .dot.on {
+            background: #28a745;
+        }
+
+        .dot.off {
+            background: #aaa;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Panel de control — Streaming Pi</h1>
+
+    <label>Servidor RTMP</label>
+    <input type="text" id="rtmp_url" value="rtmp://live.twitch.tv/app">
+
+    <label>Stream Key</label>
+    <input type="text" id="stream_key" placeholder="">
+
+    <label>Resolución</label>
+    <select id="resolution">
+        <option value="1280x720">720p</option>
+        <option value="640x480">480p</option>
+    </select>
+
+    <label>Bitrate (kbps)</label>
+    <input type="number" id="bitrate" value="2500">
+
+    <br>
+    <button id="start-btn" onclick="startStream()">▶ Iniciar streaming</button>
+    <button id="stop-btn" onclick="stopStream()">■ Detener streaming</button>
+
+    <div id="status-box">
+        <p><span class="dot off" id="dot"></span><span id="status-text">Inactivo</span></p>
+        <p>CPU: <span id="cpu">--</span>% &nbsp; RAM: <span id="ram">--</span>% &nbsp; Temp: <span id="temp">--</span>°C
+        </p>
+    </div>
+
+    <div style="margin-top: 24px; text-align: center;">
+        <img src="/static/logo-uam.png" alt="Universidad Autónoma de Madrid" style="width: 140px; opacity: 0.85;">
+        <p style="margin-top: 8px; font-size: 0.78em; color: #888; font-family: Arial, sans-serif;">
+            Jose María León Fernández · TFG 2026<br>
+            Escuela Politécnica Superior · UAM
+        </p>
+    </div>
+
+    <script>
+        function getConfig() {
+            return {
+                rtmp_url: document.getElementById("rtmp_url").value,
+                stream_key: document.getElementById("stream_key").value,
+                resolution: document.getElementById("resolution").value,
+                bitrate: document.getElementById("bitrate").value
+            };
+        }
+
+        function startStream() {
+            const config = getConfig();
+            if (!config.stream_key) {
+                alert("Introduce tu Stream Key antes de iniciar.");
+                return;
+            }
+            fetch("/start", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(config)
+            }).then(r => r.json()).then(d => console.log(d));
+        }
+
+        function stopStream() {
+            fetch("/stop", { method: "POST" })
+                .then(r => r.json()).then(d => console.log(d));
+        }
+
+        function updateStats() {
+            fetch("/stats").then(r => r.json()).then(d => {
+                document.getElementById("cpu").textContent = d.cpu;
+                document.getElementById("ram").textContent = d.ram;
+                document.getElementById("temp").textContent = d.temp;
+                const dot = document.getElementById("dot");
+                const txt = document.getElementById("status-text");
+                if (d.running) {
+                    dot.className = "dot on";
+                    txt.textContent = "Streaming activo";
+                } else {
+                    dot.className = "dot off";
+                    txt.textContent = "Inactivo";
+                }
+            });
+        }
+
+        setInterval(updateStats, 3000);
+        updateStats();
+    </script>
+</body>
+
+</html>
